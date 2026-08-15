@@ -35,7 +35,7 @@ describe("criteria generation service", () => {
       decision: { title: "Choose a platform", optionA: "A", optionB: "B" },
       projectContext: { projectType: "New application" },
       enterpriseContext: { constraints: [] },
-    }, { apiKey: "test-key", model: "test-model", callProvider });
+    }, { provider: "openai", apiKey: "test-key", model: "test-model", callProvider });
 
     const request = callProvider.mock.calls[0][0];
     expect(request.text.format).toMatchObject({ type: "json_schema", strict: true, schema: CRITERIA_OUTPUT_SCHEMA });
@@ -48,6 +48,25 @@ describe("criteria generation service", () => {
   });
 
   it("requires a server-side API key", async () => {
-    await expect(generateEvaluationCriteria({}, { apiKey: "" })).rejects.toThrow(/OPENAI_API_KEY/);
+    await expect(generateEvaluationCriteria({}, { provider: "openai", apiKey: "" })).rejects.toThrow(/OPENAI_API_KEY/);
+  });
+
+  it("requests schema-constrained JSON from a local Ollama model", async () => {
+    const callProvider = vi.fn().mockResolvedValue({
+      message: { content: JSON.stringify({ criteria: MODEL_CRITERIA }) },
+    });
+    const result = await generateEvaluationCriteria({
+      decision: { title: "Choose a platform", optionA: "A", optionB: "B" },
+      projectContext: { projectType: "New application" },
+      enterpriseContext: { constraints: [] },
+    }, { provider: "ollama", model: "local-test", callProvider });
+
+    const request = callProvider.mock.calls[0][0];
+    expect(request.format).toEqual(CRITERIA_OUTPUT_SCHEMA);
+    expect(request.format.properties.criteria.items.properties).not.toHaveProperty("weight");
+    expect(request.messages[0].content).toMatch(/Do not calculate option scores, weighted scores/i);
+    expect(result.provider).toBe("ollama");
+    expect(result.model).toBe("local-test");
+    expect(result.criteria.reduce((total, criterion) => total + criterion.weight, 0)).toBe(100);
   });
 });

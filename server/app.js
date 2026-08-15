@@ -102,7 +102,12 @@ export function createRequestHandler(options = {}) {
       return;
     }
     if (pathname === "/api/health") {
-      sendJson(response, 200, { status: "ok", modelConfigured: Boolean(process.env.OPENAI_API_KEY) });
+      const provider = process.env.LLM_PROVIDER || "openai";
+      sendJson(response, 200, {
+        status: "ok",
+        provider,
+        modelConfigured: provider === "ollama" || Boolean(process.env.OPENAI_API_KEY),
+      });
       return;
     }
     if (apiOnly) {

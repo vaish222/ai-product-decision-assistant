@@ -1,4 +1,5 @@
 import { requestOpenAIResponses } from "./openaiClient.js";
+import { requestOllamaChat } from "./ollamaClient.js";
 
 export const CRITERIA_OUTPUT_SCHEMA = {
   type: "object",
@@ -47,7 +48,7 @@ export function assignDeterministicWeights(criteria) {
   return criteria.map((criterion, index) => ({ ...criterion, weight: weights[index] }));
 }
 
-function extractOutputText(response) {
+function extractOpenAIOutputText(response) {
   if (typeof response.output_text === "string") return response.output_text;
   for (const outputItem of response.output || []) {
     for (const content of outputItem.content || []) {
@@ -56,6 +57,11 @@ function extractOutputText(response) {
     }
   }
   throw new Error("The model response did not contain structured criteria.");
+}
+
+function extractOllamaOutputText(response) {
+  if (typeof response.message?.content === "string") return response.message.content;
+  throw new Error("The local model response did not contain structured criteria.");
 }
 
 export function validateGeneratedCriteria(payload) {
@@ -81,39 +87,66 @@ export function validateGeneratedCriteria(payload) {
 }
 
 export async function generateEvaluationCriteria(context, options = {}) {
-  const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    const error = new Error("OPENAI_API_KEY is not configured on the server.");
-    error.statusCode = 503;
+  const provider = options.provider || process.env.LLM_PROVIDER || "openai";
+  let model;
+  let response;
+  let outputText;
+
+  if (provider === "ollama") {
+    model = options.model || process.env.OLLAMA_MODEL || "gemma4:latest";
+    const callProvider = options.callProvider || requestOllamaChat;
+    response = await callProvider({
+      model,
+      stream: false,
+      messages: [
+        { role: "system", content: SYSTEM_INSTRUCTIONS },
+        { role: "user", content: JSON.stringify(context) },
+      ],
+      format: CRITERIA_OUTPUT_SCHEMA,
+      options: { temperature: 0 },
+    }, { baseUrl: options.baseUrl || process.env.OLLAMA_BASE_URL });
+    outputText = extractOllamaOutputText(response);
+  } else if (provider === "openai") {
+    const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      const error = new Error("OPENAI_API_KEY is not configured on the server.");
+      error.statusCode = 503;
+      throw error;
+    }
+    model = options.model || process.env.OPENAI_MODEL || "gpt-5.4-mini";
+    const callProvider = options.callProvider || requestOpenAIResponses;
+    response = await callProvider({
+      model,
+      store: false,
+      input: [
+        { role: "system", content: SYSTEM_INSTRUCTIONS },
+        { role: "user", content: JSON.stringify(context) },
+      ],
+      max_output_tokens: 2400,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "evaluation_criteria",
+          strict: true,
+          schema: CRITERIA_OUTPUT_SCHEMA,
+        },
+      },
+    }, { apiKey });
+    outputText = extractOpenAIOutputText(response);
+  } else {
+    const error = new Error(`Unsupported LLM provider: ${provider}`);
+    error.statusCode = 500;
     throw error;
   }
-  const model = options.model || process.env.OPENAI_MODEL || "gpt-5.4-mini";
-  const callProvider = options.callProvider || requestOpenAIResponses;
-  const requestPayload = {
-    model,
-    store: false,
-    input: [
-      { role: "system", content: SYSTEM_INSTRUCTIONS },
-      { role: "user", content: JSON.stringify(context) },
-    ],
-    max_output_tokens: 2400,
-    text: {
-      format: {
-        type: "json_schema",
-        name: "evaluation_criteria",
-        strict: true,
-        schema: CRITERIA_OUTPUT_SCHEMA,
-      },
-    },
-  };
-  const response = await callProvider(requestPayload, { apiKey });
-  const structured = JSON.parse(extractOutputText(response));
+
+  const structured = JSON.parse(outputText);
   const criteria = assignDeterministicWeights(validateGeneratedCriteria(structured))
     .map((criterion, index) => ({ ...criterion, id: `criterion-${index + 1}` }));
   return {
     criteria,
     generatedAt: new Date().toISOString(),
     model,
+    provider,
     weightingMethod: "deterministic_importance_normalization_v1",
   };
 }

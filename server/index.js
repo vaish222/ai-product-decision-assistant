@@ -10,7 +10,11 @@ const server = http.createServer(createRequestHandler({ apiOnly }));
 
 server.listen(port, "127.0.0.1", () => {
   console.log(`${apiOnly ? "API" : "Application"} server running at http://127.0.0.1:${port}`);
-  if (!process.env.OPENAI_API_KEY) console.log("Criteria generation is disabled until OPENAI_API_KEY is configured.");
+  const provider = process.env.LLM_PROVIDER || "openai";
+  console.log(`Criteria generation provider: ${provider}`);
+  if (provider === "openai" && !process.env.OPENAI_API_KEY) {
+    console.log("Criteria generation is disabled until OPENAI_API_KEY is configured.");
+  }
 });
 
 function shutdown() {
