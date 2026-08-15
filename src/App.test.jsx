@@ -1,8 +1,29 @@
 import React from "react";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { DRAFT_STORAGE_KEY } from "./domain/decisionDraft";
+
+const GENERATED_CRITERIA = [
+  { id: "criterion-1", name: "Security & Compliance", description: "Assess required security controls and compliance obligations.", importance: "critical", rationale: "SOC 2 is part of the project context.", weight: 24 },
+  { id: "criterion-2", name: "Enterprise Architecture Fit", description: "Assess compatibility with current platforms and standards.", importance: "high", rationale: "The current stack should be reused where practical.", weight: 19 },
+  { id: "criterion-3", name: "Integration Complexity", description: "Assess effort to integrate identity, data, and delivery systems.", importance: "high", rationale: "Enterprise integrations affect delivery risk.", weight: 19 },
+  { id: "criterion-4", name: "Time to Market", description: "Assess the effect on the stated delivery timeline.", importance: "medium", rationale: "The project has a defined delivery window.", weight: 13 },
+  { id: "criterion-5", name: "Operational Fit", description: "Assess monitoring, support, and operational skill requirements.", importance: "medium", rationale: "Operational adoption affects long-term viability.", weight: 13 },
+  { id: "criterion-6", name: "Cost", description: "Assess implementation and ongoing platform cost sensitivity.", importance: "medium", rationale: "Budget sensitivity must be represented.", weight: 12 },
+];
+
+beforeEach(() => {
+  globalThis.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      criteria: GENERATED_CRITERIA,
+      generatedAt: "2026-08-15T12:00:00.000Z",
+      model: "test-model",
+      weightingMethod: "deterministic_importance_normalization_v1",
+    }),
+  });
+});
 
 function completeDefineDecision() {
   fireEvent.change(screen.getByLabelText("Decision title"), { target: { value: "Choose our application database" } });
@@ -29,7 +50,7 @@ describe("decision setup flow", () => {
     expect(screen.getByRole("heading", { name: "What are you trying to decide?" })).toBeInTheDocument();
   });
 
-  it("moves through all three steps, preserves selections, and saves the draft", async () => {
+  it("moves through all four steps, preserves selections, and saves the draft", async () => {
     render(<App />);
     completeDefineDecision();
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
@@ -46,9 +67,14 @@ describe("decision setup flow", () => {
     fireEvent.keyDown(screen.getByLabelText("Project-specific planned technologies"), { key: "Enter" });
     fireEvent.change(screen.getByLabelText("Constraint"), { target: { value: "Must integrate with Microsoft Entra ID" } });
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
-    fireEvent.click(screen.getByRole("button", { name: /save draft/i }));
+    fireEvent.click(screen.getByRole("button", { name: /generate evaluation criteria/i }));
 
-    expect(screen.getByText("Enterprise context saved")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Here’s what matters for this decision" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Security & Compliance" })).toBeInTheDocument());
+    await waitFor(() => {
+      const saved = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY));
+      expect(saved.evaluationCriteria.items).toHaveLength(6);
+    });
     const stored = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY));
     expect(stored.defineDecision.optionA).toBe("PostgreSQL");
     expect(stored.projectContext.teamSize).toBe("12");
@@ -59,7 +85,12 @@ describe("decision setup flow", () => {
       statement: "Must integrate with Microsoft Entra ID",
       classification: "Must Have",
     });
+    expect(stored.evaluationCriteria.items).toHaveLength(6);
+    expect(stored.evaluationCriteria.items.reduce((total, criterion) => total + criterion.weight, 0)).toBe(100);
+    expect(fetch).toHaveBeenCalledWith("/api/criteria/generate", expect.objectContaining({ method: "POST" }));
 
+    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
+    expect(screen.getByRole("heading", { name: "What does your technology environment look like?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
     expect(screen.getByRole("heading", { name: "Tell us about your project" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
@@ -80,23 +111,24 @@ describe("decision setup flow", () => {
 
   it("restores a saved draft at its last step", () => {
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
-      schemaVersion: 2,
-      currentStep: 3,
+      schemaVersion: 3,
+      currentStep: 4,
       updatedAt: "2026-08-14T12:00:00.000Z",
       defineDecision: { title: "Choose a database", optionA: "PostgreSQL", optionB: "MongoDB" },
       projectContext: { projectType: "New application", complianceRequirements: [] },
       enterpriseContext: { plannedTechnologies: ["Kubernetes"] },
+      evaluationCriteria: { items: GENERATED_CRITERIA, generatedAt: "2026-08-15T12:00:00.000Z", model: "test-model" },
     }));
 
     render(<App />);
-    expect(screen.getByRole("heading", { name: "What does your technology environment look like?" })).toBeInTheDocument();
-    expect(screen.getByText("Kubernetes")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Here’s what matters for this decision" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Security & Compliance" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
-    expect(screen.getByRole("heading", { name: "Tell us about your project" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What does your technology environment look like?" })).toBeInTheDocument();
   });
 
   it("validates, reclassifies, and removes enterprise constraints", () => {
-    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ schemaVersion: 2, currentStep: 3 }));
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ schemaVersion: 3, currentStep: 3 }));
     render(<App />);
 
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
@@ -108,5 +140,17 @@ describe("decision setup flow", () => {
     expect(classification).toHaveValue("Nice to Have");
     fireEvent.click(screen.getByRole("button", { name: "Remove constraint: Prefer managed services" }));
     expect(screen.getByText("No enterprise constraints added yet.")).toBeInTheDocument();
+  });
+
+  it("shows a recoverable server configuration error", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: "OPENAI_API_KEY is not configured on the server." }),
+    });
+    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ schemaVersion: 3, currentStep: 3 }));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /generate evaluation criteria/i }));
+    await waitFor(() => expect(screen.getByText("OPENAI_API_KEY is not configured on the server.")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   });
 });

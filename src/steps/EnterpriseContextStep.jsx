@@ -8,13 +8,11 @@ import {
   validateEnterpriseContext,
 } from "../domain/decisionDraft";
 
-export function EnterpriseContextStep({ values, onChange, onBack, onSave }) {
+export function EnterpriseContextStep({ values, onChange, onBack, onGenerate }) {
   const [errors, setErrors] = useState({});
-  const [saved, setSaved] = useState(false);
 
   function update(field, value) {
     onChange(field, value);
-    setSaved(false);
     if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }));
   }
 
@@ -27,8 +25,7 @@ export function EnterpriseContextStep({ values, onChange, onBack, onSave }) {
     const nextErrors = validateEnterpriseContext(values);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length === 0) {
-      onSave();
-      setSaved(true);
+      onGenerate();
     }
   }
 
@@ -108,16 +105,9 @@ export function EnterpriseContextStep({ values, onChange, onBack, onSave }) {
         <ConstraintEditor value={values.constraints} onChange={(value) => update("constraints", value)} error={errors.constraints} />
       </section>
 
-      {saved && (
-        <div className="success-banner" role="status">
-          <span aria-hidden="true">✓</span>
-          <div><strong>Enterprise context saved</strong><p>Your complete three-step draft is stored on this device.</p></div>
-        </div>
-      )}
-
       <div className="form-actions">
         <button className="button button--secondary" type="button" onClick={onBack}><span aria-hidden="true">←</span> Back</button>
-        <button className="button button--primary" type="submit">Save draft <span aria-hidden="true">✓</span></button>
+        <button className="button button--primary" type="submit">Generate evaluation criteria <span aria-hidden="true">→</span></button>
       </div>
     </form>
   );

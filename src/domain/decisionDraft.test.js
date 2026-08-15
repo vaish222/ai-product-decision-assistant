@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DRAFT_STORAGE_KEY,
-  LEGACY_DRAFT_STORAGE_KEY,
+  LEGACY_DRAFT_STORAGE_KEYS,
   createEmptyDraft,
   loadDraft,
   saveDraft,
@@ -63,15 +63,16 @@ describe("draft persistence", () => {
   });
 
   it("migrates an existing version-one draft without losing data", () => {
-    window.localStorage.setItem(LEGACY_DRAFT_STORAGE_KEY, JSON.stringify({
+    window.localStorage.setItem(LEGACY_DRAFT_STORAGE_KEYS[1], JSON.stringify({
       schemaVersion: 1,
       currentStep: 2,
       defineDecision: { title: "Existing decision" },
       projectContext: { projectType: "Platform migration" },
     }));
     const migrated = loadDraft();
-    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.schemaVersion).toBe(3);
     expect(migrated.defineDecision.title).toBe("Existing decision");
     expect(migrated.enterpriseContext.currentTechStack.databases).toEqual([]);
+    expect(migrated.evaluationCriteria.items).toEqual([]);
   });
 });

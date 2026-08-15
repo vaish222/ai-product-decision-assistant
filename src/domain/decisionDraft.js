@@ -1,5 +1,8 @@
-export const DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v2";
-export const LEGACY_DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v1";
+export const DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v3";
+export const LEGACY_DRAFT_STORAGE_KEYS = [
+  "ai-product-decision-assistant:draft:v2",
+  "ai-product-decision-assistant:draft:v1",
+];
 
 export const PROJECT_TYPES = [
   "New application",
@@ -39,7 +42,7 @@ export const CONSTRAINT_CLASSIFICATIONS = ["Must Have", "Preferred", "Nice to Ha
 
 export function createEmptyDraft() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     currentStep: 1,
     updatedAt: null,
     defineDecision: {
@@ -64,6 +67,12 @@ export function createEmptyDraft() {
       currentTechStack: Object.fromEntries(STACK_CATEGORIES.map(({ key }) => [key, []])),
       plannedTechnologies: [],
       constraints: [],
+    },
+    evaluationCriteria: {
+      items: [],
+      generatedAt: null,
+      model: null,
+      weightingMethod: null,
     },
   };
 }
@@ -157,13 +166,13 @@ function removeEmptyErrors(errors) {
 
 function migrateDraft(stored) {
   const emptyDraft = createEmptyDraft();
-  if (!stored || ![1, 2].includes(stored.schemaVersion)) return emptyDraft;
+  if (!stored || ![1, 2, 3].includes(stored.schemaVersion)) return emptyDraft;
   const currentStack = stored.enterpriseContext?.currentTechStack || {};
   return {
     ...emptyDraft,
     ...stored,
-    schemaVersion: 2,
-    currentStep: [2, 3].includes(stored.currentStep) ? stored.currentStep : 1,
+    schemaVersion: 3,
+    currentStep: [2, 3, 4].includes(stored.currentStep) ? stored.currentStep : 1,
     defineDecision: { ...emptyDraft.defineDecision, ...stored.defineDecision },
     projectContext: { ...emptyDraft.projectContext, ...stored.projectContext },
     enterpriseContext: {
@@ -171,11 +180,12 @@ function migrateDraft(stored) {
       ...stored.enterpriseContext,
       currentTechStack: { ...emptyDraft.enterpriseContext.currentTechStack, ...currentStack },
     },
+    evaluationCriteria: { ...emptyDraft.evaluationCriteria, ...stored.evaluationCriteria },
   };
 }
 
 export function loadDraft(storage = window.localStorage) {
-  for (const key of [DRAFT_STORAGE_KEY, LEGACY_DRAFT_STORAGE_KEY]) {
+  for (const key of [DRAFT_STORAGE_KEY, ...LEGACY_DRAFT_STORAGE_KEYS]) {
     try {
       const stored = JSON.parse(storage.getItem(key));
       if (stored) return migrateDraft(stored);

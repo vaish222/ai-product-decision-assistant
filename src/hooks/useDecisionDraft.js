@@ -20,7 +20,13 @@ export function useDecisionDraft() {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [draft.currentStep, draft.defineDecision, draft.projectContext]);
+  }, [
+    draft.currentStep,
+    draft.defineDecision,
+    draft.projectContext,
+    draft.enterpriseContext,
+    draft.evaluationCriteria,
+  ]);
 
   function updateSection(section, field, value) {
     setDraft((current) => ({
