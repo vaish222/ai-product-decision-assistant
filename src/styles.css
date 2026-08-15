@@ -20,6 +20,7 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--soft); }
 button, input, textarea { font: inherit; }
 button { cursor: pointer; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .app-shell { min-height: 100vh; display: grid; grid-template-rows: 68px 1fr 42px; }
 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(22px, 4vw, 64px); color: white; background: var(--navy); border-bottom: 1px solid #2a3b54; }
@@ -36,7 +37,7 @@ main { width: min(1180px, calc(100% - 40px)); margin: 0 auto; display: grid; gri
 .sidebar { position: sticky; top: 36px; }
 .progress__meta { display: flex; justify-content: space-between; color: #7c8da4; font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: .08em; }
 .progress__steps { list-style: none; padding: 22px 0 6px; margin: 0; position: relative; }
-.progress__steps::before { content: ""; position: absolute; left: 15px; top: 48px; height: 37px; border-left: 1px dashed #bcc9d8; }
+.progress__steps::before { content: ""; position: absolute; left: 15px; top: 48px; height: 92px; border-left: 1px dashed #bcc9d8; }
 .progress__step { display: flex; align-items: center; gap: 13px; margin-bottom: 24px; color: #8491a5; font-size: 14px; font-weight: 650; }
 .progress__dot { width: 31px; height: 31px; display: grid; place-items: center; flex: none; border: 1px solid #cbd5e1; background: var(--soft); border-radius: 50%; font-size: 12px; }
 .progress__step--active { color: var(--ink); }
@@ -53,6 +54,7 @@ main { width: min(1180px, calc(100% - 40px)); margin: 0 auto; display: grid; gri
 h1 { color: var(--ink); margin: 12px 0 12px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(37px, 4.5vw, 55px); line-height: 1.04; letter-spacing: -.035em; font-weight: 500; }
 .lede { margin: 0 0 36px; max-width: 650px; color: var(--muted); font-size: 17px; line-height: 1.6; }
 .form-section { margin: 0 0 24px; padding: 28px 30px 30px; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 31, 56, .045); }
+.form-section--accent { border-top: 3px solid #55c5ba; }
 .section-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding-bottom: 21px; margin-bottom: 24px; border-bottom: 1px solid #edf1f6; }
 .section-heading h2 { margin: 0; color: var(--ink); font-size: 17px; }
 .section-heading p { margin: 5px 0 0; color: #7a899c; font-size: 13px; }
@@ -107,12 +109,52 @@ fieldset legend { margin-bottom: 10px; padding: 0; }
 .success-banner > span { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--teal); }
 .success-banner strong { font-size: 13px; }
 .success-banner p { margin: 2px 0 0; font-size: 12px; }
+.stack-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 18px; }
+.tag-field > label { display: block; margin-bottom: 8px; color: #28384e; font-size: 13px; font-weight: 720; }
+.tag-input { min-height: 46px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 6px 7px; border: 1px solid #cbd6e3; border-radius: 8px; background: #fcfdff; cursor: text; transition: border-color .15s, box-shadow .15s; }
+.tag-input:focus-within { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(36, 91, 215, .12); }
+.tag-field--error .tag-input { border-color: #e88d85; }
+.tag-input input { flex: 1; min-width: 115px; height: 30px; border: 0; outline: 0; padding: 0 5px; background: transparent; color: var(--ink); font-size: 12px; }
+.tag-input input::placeholder { color: #9ba8b8; }
+.tag-input__add { width: 29px; height: 29px; flex: none; border: 0; border-radius: 6px; color: #526b8d; background: #edf2f8; font-size: 17px; }
+.tag-input__add:hover { color: white; background: var(--blue); }
+.technology-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 9px; border: 1px solid #cfe0f7; border-radius: 6px; color: #315787; background: #eff6ff; font-size: 11px; font-weight: 650; }
+.technology-tag button { width: 18px; height: 18px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 4px; color: #6f88a8; background: transparent; line-height: 1; }
+.technology-tag button:hover { color: #fff; background: #6685aa; }
+.planned-context-note { display: flex; align-items: flex-start; gap: 11px; margin: 0 0 20px; padding: 13px 15px; border-radius: 9px; color: #52716f; background: #effaf8; }
+.planned-context-note span { color: var(--teal); font-weight: 800; }
+.planned-context-note p { margin: 0; font-size: 12px; line-height: 1.5; }
+.classification-guide { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 23px; }
+.classification-guide p { margin: 0; padding: 12px; color: #6d7b8d; background: #f8fafc; border: 1px solid #e4eaf1; border-radius: 8px; font-size: 10px; line-height: 1.45; }
+.classification-guide strong { display: block; margin: 0 0 3px 15px; color: #35465d; font-size: 11px; }
+.classification-dot { width: 8px; height: 8px; float: left; margin-top: 4px; border-radius: 50%; }
+.classification-dot--must { background: #dc5b55; }
+.classification-dot--preferred { background: #e9a23b; }
+.classification-dot--nice { background: #4eb4a9; }
+.constraint-editor__composer { display: grid; grid-template-columns: minmax(0, 1fr) 145px auto; gap: 10px; align-items: end; }
+.constraint-editor__composer .field { margin: 0; }
+.constraint-editor select, .constraint-list select { height: 46px; width: 100%; padding: 0 32px 0 11px; border: 1px solid #cbd6e3; border-radius: 8px; color: #43546b; background: #fcfdff; outline: none; }
+.constraint-editor select:focus, .constraint-list select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(36, 91, 215, .12); }
+.constraint-editor__add { height: 46px; }
+.constraint-editor > .field__error { margin-top: 8px; }
+.constraint-list { list-style: none; padding: 0; margin: 22px 0 0; border-top: 1px solid #e6ebf1; }
+.constraint-list li { display: grid; grid-template-columns: 9px minmax(0, 1fr) 135px 30px; gap: 12px; align-items: center; padding: 14px 2px; border-bottom: 1px solid #edf1f5; }
+.constraint-list__marker { width: 8px; height: 8px; border-radius: 50%; }
+.constraint-list__marker--must-have { background: #dc5b55; }
+.constraint-list__marker--preferred { background: #e9a23b; }
+.constraint-list__marker--nice-to-have { background: #4eb4a9; }
+.constraint-list p { margin: 0; color: #35465d; font-size: 12px; line-height: 1.5; }
+.constraint-list select { height: 36px; font-size: 11px; }
+.constraint-list button { width: 28px; height: 28px; border: 0; border-radius: 6px; color: #8d9aab; background: transparent; font-size: 17px; }
+.constraint-list button:hover { color: #b42318; background: #fff0ef; }
+.empty-constraints { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 20px; padding: 22px; border: 1px dashed #cbd6e3; border-radius: 9px; color: #91a0b1; }
+.empty-constraints p { margin: 0; font-size: 12px; }
 footer { display: grid; place-items: center; color: #93a1b3; font-family: Georgia, serif; font-size: 12px; font-style: italic; letter-spacing: .03em; border-top: 1px solid #e1e7ef; background: #f9fafc; }
 
 @media (max-width: 850px) {
   main { grid-template-columns: 1fr; gap: 30px; padding-top: 32px; }
   .sidebar { position: static; }
-  .progress__steps { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 0; }
+  .progress__steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-bottom: 0; }
   .progress__steps::before, .principle-card { display: none; }
   .progress__step { margin: 0; }
   .content-panel { max-width: 720px; }
@@ -129,6 +171,11 @@ footer { display: grid; place-items: center; color: #93a1b3; font-family: Georgi
   .lede { font-size: 15px; margin-bottom: 26px; }
   .form-section { padding: 22px 18px; }
   .option-grid, .two-column-fields, .choice-group__grid, .choice-group--compact .choice-group__grid { grid-template-columns: 1fr; }
+  .stack-grid, .classification-guide { grid-template-columns: 1fr; }
+  .constraint-editor__composer { grid-template-columns: 1fr; }
+  .constraint-editor__add { width: 100%; }
+  .constraint-list li { grid-template-columns: 9px minmax(0, 1fr) 30px; }
+  .constraint-list select { grid-column: 2 / 3; grid-row: 2; }
   .form-actions { align-items: stretch; }
   .form-actions p { display: none; }
   .form-actions .button { flex: 1; }

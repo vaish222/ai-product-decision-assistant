@@ -1,4 +1,5 @@
-export const DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v1";
+export const DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v2";
+export const LEGACY_DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v1";
 
 export const PROJECT_TYPES = [
   "New application",
@@ -23,9 +24,22 @@ export const COMPLIANCE_OPTIONS = [
   "Other",
 ];
 
+export const CLOUD_PLATFORM_OPTIONS = ["Azure", "AWS", "Google Cloud", "Hybrid", "On-premise", "Other"];
+export const STACK_CATEGORIES = [
+  { key: "databases", label: "Databases", placeholder: "PostgreSQL" },
+  { key: "backend", label: "Backend frameworks", placeholder: "Spring Boot" },
+  { key: "frontend", label: "Frontend frameworks", placeholder: "React" },
+  { key: "identity", label: "Authentication / IAM", placeholder: "Microsoft Entra ID" },
+  { key: "delivery", label: "CI/CD", placeholder: "GitHub Actions" },
+  { key: "monitoring", label: "Monitoring", placeholder: "Datadog" },
+  { key: "dataPlatforms", label: "Data platforms", placeholder: "Snowflake" },
+  { key: "aiPlatforms", label: "AI/ML platforms", placeholder: "Azure AI Foundry" },
+];
+export const CONSTRAINT_CLASSIFICATIONS = ["Must Have", "Preferred", "Nice to Have"];
+
 export function createEmptyDraft() {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     currentStep: 1,
     updatedAt: null,
     defineDecision: {
@@ -44,6 +58,12 @@ export function createEmptyDraft() {
       budgetSensitivity: "",
       complianceRequirements: [],
       additionalConstraints: "",
+    },
+    enterpriseContext: {
+      cloudPlatforms: [],
+      currentTechStack: Object.fromEntries(STACK_CATEGORIES.map(({ key }) => [key, []])),
+      plannedTechnologies: [],
+      constraints: [],
     },
   };
 }
@@ -95,6 +115,33 @@ export function validateProjectContext(values) {
   return removeEmptyErrors(errors);
 }
 
+export function validateEnterpriseContext(values) {
+  const errors = {};
+  const seenConstraints = new Set();
+
+  for (const constraint of values.constraints) {
+    const statement = constraint.statement.trim();
+    if (!statement) errors.constraints = "Every enterprise constraint needs a description.";
+    if (statement.length > 240) errors.constraints = "Enterprise constraints must be 240 characters or fewer.";
+    const normalized = statement.toLocaleLowerCase();
+    if (seenConstraints.has(normalized)) errors.constraints = "Duplicate enterprise constraints are not allowed.";
+    seenConstraints.add(normalized);
+    if (!CONSTRAINT_CLASSIFICATIONS.includes(constraint.classification)) {
+      errors.constraints = "Every enterprise constraint needs a valid classification.";
+    }
+  }
+
+  const technologyGroups = [
+    ...Object.values(values.currentTechStack),
+    values.plannedTechnologies,
+  ];
+  if (technologyGroups.some((group) => group.some((technology) => technology.length > 60))) {
+    errors.technologies = "Technology names must be 60 characters or fewer.";
+  }
+
+  return errors;
+}
+
 function validateTeamSize(value) {
   if (!String(value).trim()) return "Team size is required.";
   const teamSize = Number(value);
@@ -108,21 +155,35 @@ function removeEmptyErrors(errors) {
   return Object.fromEntries(Object.entries(errors).filter(([, message]) => message));
 }
 
-export function loadDraft(storage = window.localStorage) {
+function migrateDraft(stored) {
   const emptyDraft = createEmptyDraft();
-  try {
-    const stored = JSON.parse(storage.getItem(DRAFT_STORAGE_KEY));
-    if (!stored || stored.schemaVersion !== 1) return emptyDraft;
-    return {
-      ...emptyDraft,
-      ...stored,
-      currentStep: stored.currentStep === 2 ? 2 : 1,
-      defineDecision: { ...emptyDraft.defineDecision, ...stored.defineDecision },
-      projectContext: { ...emptyDraft.projectContext, ...stored.projectContext },
-    };
-  } catch {
-    return emptyDraft;
+  if (!stored || ![1, 2].includes(stored.schemaVersion)) return emptyDraft;
+  const currentStack = stored.enterpriseContext?.currentTechStack || {};
+  return {
+    ...emptyDraft,
+    ...stored,
+    schemaVersion: 2,
+    currentStep: [2, 3].includes(stored.currentStep) ? stored.currentStep : 1,
+    defineDecision: { ...emptyDraft.defineDecision, ...stored.defineDecision },
+    projectContext: { ...emptyDraft.projectContext, ...stored.projectContext },
+    enterpriseContext: {
+      ...emptyDraft.enterpriseContext,
+      ...stored.enterpriseContext,
+      currentTechStack: { ...emptyDraft.enterpriseContext.currentTechStack, ...currentStack },
+    },
+  };
+}
+
+export function loadDraft(storage = window.localStorage) {
+  for (const key of [DRAFT_STORAGE_KEY, LEGACY_DRAFT_STORAGE_KEY]) {
+    try {
+      const stored = JSON.parse(storage.getItem(key));
+      if (stored) return migrateDraft(stored);
+    } catch {
+      // Ignore a malformed entry and try the next compatible storage key.
+    }
   }
+  return createEmptyDraft();
 }
 
 export function saveDraft(draft, storage = window.localStorage) {

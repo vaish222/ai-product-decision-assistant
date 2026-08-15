@@ -10,13 +10,11 @@ import {
   validateProjectContext,
 } from "../domain/decisionDraft";
 
-export function ProjectContextStep({ values, onChange, onBack, onSave }) {
+export function ProjectContextStep({ values, onChange, onBack, onContinue }) {
   const [errors, setErrors] = useState({});
-  const [saved, setSaved] = useState(false);
 
   function update(field, value) {
     onChange(field, value);
-    setSaved(false);
     if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }));
   }
 
@@ -24,10 +22,7 @@ export function ProjectContextStep({ values, onChange, onBack, onSave }) {
     event.preventDefault();
     const nextErrors = validateProjectContext(values);
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length === 0) {
-      onSave();
-      setSaved(true);
-    }
+    if (Object.keys(nextErrors).length === 0) onContinue();
   }
 
   return (
@@ -75,11 +70,9 @@ export function ProjectContextStep({ values, onChange, onBack, onSave }) {
         <FormField id="additional-constraints" label="Additional constraints" optional value={values.additionalConstraints} onChange={(value) => update("additionalConstraints", value)} error={errors.additionalConstraints} maxLength={1500} multiline placeholder="Add technical, organizational, procurement, or delivery constraints." />
       </section>
 
-      {saved && <div className="success-banner" role="status"><span aria-hidden="true">✓</span><div><strong>Draft ready</strong><p>Your decision and project context are saved on this device.</p></div></div>}
-
       <div className="form-actions">
         <button className="button button--secondary" type="button" onClick={onBack}><span aria-hidden="true">←</span> Back</button>
-        <button className="button button--primary" type="submit">Save draft <span aria-hidden="true">✓</span></button>
+        <button className="button button--primary" type="submit">Continue <span aria-hidden="true">→</span></button>
       </div>
     </form>
   );

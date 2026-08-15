@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   DRAFT_STORAGE_KEY,
+  LEGACY_DRAFT_STORAGE_KEY,
   createEmptyDraft,
   loadDraft,
   saveDraft,
   validateDefineDecision,
+  validateEnterpriseContext,
   validateProjectContext,
 } from "./decisionDraft";
 
@@ -35,6 +37,15 @@ describe("decision draft validation", () => {
     expect(errors.teamSize).toMatch(/whole number/);
     expect(errors.projectType).toBeTruthy();
   });
+
+  it("rejects duplicate or invalid enterprise constraints", () => {
+    const enterpriseContext = createEmptyDraft().enterpriseContext;
+    enterpriseContext.constraints = [
+      { id: "one", statement: "Remain within Azure", classification: "Must Have" },
+      { id: "two", statement: "remain within azure", classification: "Mandatory" },
+    ];
+    expect(validateEnterpriseContext(enterpriseContext).constraints).toBeTruthy();
+  });
 });
 
 describe("draft persistence", () => {
@@ -49,5 +60,18 @@ describe("draft persistence", () => {
   it("falls back safely when stored JSON is invalid", () => {
     window.localStorage.setItem(DRAFT_STORAGE_KEY, "not-json");
     expect(loadDraft()).toEqual(createEmptyDraft());
+  });
+
+  it("migrates an existing version-one draft without losing data", () => {
+    window.localStorage.setItem(LEGACY_DRAFT_STORAGE_KEY, JSON.stringify({
+      schemaVersion: 1,
+      currentStep: 2,
+      defineDecision: { title: "Existing decision" },
+      projectContext: { projectType: "Platform migration" },
+    }));
+    const migrated = loadDraft();
+    expect(migrated.schemaVersion).toBe(2);
+    expect(migrated.defineDecision.title).toBe("Existing decision");
+    expect(migrated.enterpriseContext.currentTechStack.databases).toEqual([]);
   });
 });
