@@ -1,6 +1,6 @@
 import { CriterionCard } from "../components/CriterionCard";
 
-export function EvaluationCriteriaStep({ criteriaState, values, onChange, onBack, onRetry }) {
+export function EvaluationCriteriaStep({ criteriaState, values, onChange, onBack, onRetry, onAnalyze }) {
   const totalWeight = values.items.reduce((total, criterion) => total + criterion.weight, 0);
 
   function updateCriterion(id, updates) {
@@ -69,7 +69,10 @@ export function EvaluationCriteriaStep({ criteriaState, values, onChange, onBack
 
       <div className="form-actions">
         <button className="button button--secondary" type="button" onClick={onBack}><span aria-hidden="true">←</span> Back</button>
-        {values.items.length > 0 && <button className="button button--secondary" type="button" onClick={onRetry}>Regenerate criteria</button>}
+        <div className="form-actions__group">
+          {values.items.length > 0 && <button className="button button--secondary" type="button" onClick={onRetry}>Regenerate criteria</button>}
+          {values.items.length > 0 && <button className="button button--primary" type="button" disabled={totalWeight !== 100} onClick={onAnalyze}>Analyze options <span aria-hidden="true">→</span></button>}
+        </div>
       </div>
     </div>
   );

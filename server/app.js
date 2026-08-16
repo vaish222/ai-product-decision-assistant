@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { generateEvaluationCriteria } from "./criteriaService.js";
+import { generateRecommendation } from "./recommendationService.js";
 
 const MAX_BODY_BYTES = 100_000;
 
@@ -80,6 +81,7 @@ function serveStatic(request, response, rootDirectory) {
 export function createRequestHandler(options = {}) {
   const apiOnly = Boolean(options.apiOnly);
   const generateCriteria = options.generateCriteria || generateEvaluationCriteria;
+  const analyzeOptions = options.generateRecommendation || generateRecommendation;
   const staticRoot = options.staticRoot || path.resolve(process.cwd(), "dist");
 
   return async function requestHandler(request, response) {
@@ -108,6 +110,23 @@ export function createRequestHandler(options = {}) {
         provider,
         modelConfigured: provider === "ollama" || Boolean(process.env.OPENAI_API_KEY),
       });
+      return;
+    }
+    if (pathname === "/api/recommendation/generate") {
+      if (request.method !== "POST") {
+        sendJson(response, 405, { error: "Method not allowed." });
+        return;
+      }
+      try {
+        const payload = await readJsonBody(request);
+        if (!isContextPayload(payload) || !payload.evaluationCriteria || typeof payload.evaluationCriteria !== "object") {
+          sendJson(response, 400, { error: "Decision context and evaluation criteria are required." });
+          return;
+        }
+        sendJson(response, 200, await analyzeOptions(payload));
+      } catch (error) {
+        sendJson(response, error.statusCode || 502, { error: error.message || "Recommendation generation failed." });
+      }
       return;
     }
     if (apiOnly) {

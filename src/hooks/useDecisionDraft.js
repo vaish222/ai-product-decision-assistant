@@ -26,6 +26,7 @@ export function useDecisionDraft() {
     draft.projectContext,
     draft.enterpriseContext,
     draft.evaluationCriteria,
+    draft.recommendation,
   ]);
 
   function updateSection(section, field, value) {
@@ -39,11 +40,15 @@ export function useDecisionDraft() {
     setDraft((current) => ({ ...current, currentStep: step }));
   }
 
+  function replaceSection(section, value) {
+    setDraft((current) => ({ ...current, [section]: value }));
+  }
+
   function saveImmediately() {
     const savedDraft = saveDraft(draft);
     setDraft(savedDraft);
     setSaveState("saved");
   }
 
-  return { draft, updateSection, goToStep, saveImmediately, saveState };
+  return { draft, updateSection, replaceSection, goToStep, saveImmediately, saveState };
 }

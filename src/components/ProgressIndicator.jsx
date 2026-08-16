@@ -1,4 +1,4 @@
-const STEPS = ["Define decision", "Project context", "Enterprise context", "Evaluation criteria"];
+const STEPS = ["Define decision", "Project context", "Enterprise context", "Evaluation criteria", "Recommendation"];
 
 export function ProgressIndicator({ currentStep }) {
   return (

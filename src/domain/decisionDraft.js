@@ -1,5 +1,6 @@
-export const DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v3";
+export const DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v4";
 export const LEGACY_DRAFT_STORAGE_KEYS = [
+  "ai-product-decision-assistant:draft:v3",
   "ai-product-decision-assistant:draft:v2",
   "ai-product-decision-assistant:draft:v1",
 ];
@@ -42,7 +43,7 @@ export const CONSTRAINT_CLASSIFICATIONS = ["Must Have", "Preferred", "Nice to Ha
 
 export function createEmptyDraft() {
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     currentStep: 1,
     updatedAt: null,
     defineDecision: {
@@ -73,6 +74,25 @@ export function createEmptyDraft() {
       generatedAt: null,
       model: null,
       weightingMethod: null,
+    },
+    recommendation: {
+      status: null,
+      recommendedOption: null,
+      summary: "",
+      scores: [],
+      confidence: null,
+      confidenceRationale: "",
+      topReasons: [],
+      keyTradeoffs: [],
+      risks: [],
+      missingInformation: [],
+      changeFactors: [],
+      facts: [],
+      inferences: [],
+      generatedAt: null,
+      model: null,
+      provider: null,
+      scoringMethod: null,
     },
   };
 }
@@ -166,13 +186,13 @@ function removeEmptyErrors(errors) {
 
 function migrateDraft(stored) {
   const emptyDraft = createEmptyDraft();
-  if (!stored || ![1, 2, 3].includes(stored.schemaVersion)) return emptyDraft;
+  if (!stored || ![1, 2, 3, 4].includes(stored.schemaVersion)) return emptyDraft;
   const currentStack = stored.enterpriseContext?.currentTechStack || {};
   return {
     ...emptyDraft,
     ...stored,
-    schemaVersion: 3,
-    currentStep: [2, 3, 4].includes(stored.currentStep) ? stored.currentStep : 1,
+    schemaVersion: 4,
+    currentStep: [2, 3, 4, 5].includes(stored.currentStep) ? stored.currentStep : 1,
     defineDecision: { ...emptyDraft.defineDecision, ...stored.defineDecision },
     projectContext: { ...emptyDraft.projectContext, ...stored.projectContext },
     enterpriseContext: {
@@ -181,6 +201,7 @@ function migrateDraft(stored) {
       currentTechStack: { ...emptyDraft.enterpriseContext.currentTechStack, ...currentStack },
     },
     evaluationCriteria: { ...emptyDraft.evaluationCriteria, ...stored.evaluationCriteria },
+    recommendation: { ...emptyDraft.recommendation, ...stored.recommendation },
   };
 }
 

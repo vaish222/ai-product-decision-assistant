@@ -1,15 +1,20 @@
 # AI Product Decision Assistant
 
 The implemented product slice includes **Define Decision**, **Project Context**,
-**Enterprise Context**, and AI-assisted **Evaluation Criteria**. It captures
-current and planned technologies, classifies enterprise constraints, and uses a
-server-side local Ollama model or the OpenAI Responses API to propose structured
-evaluation criteria.
+**Enterprise Context**, AI-assisted **Evaluation Criteria**, and a transparent
+**Recommendation**. It captures current and planned technologies, classifies
+enterprise constraints, and uses a server-side local Ollama model or the OpenAI
+Responses API to propose structured evaluation criteria and option analysis.
 
-The model returns qualitative criteria through a strict JSON schema. Numeric
-criterion weights are derived deterministically by application code. The model
-is explicitly prohibited from evaluating options or calculating option scores,
-weighted scores, rankings, or recommendations.
+The criteria-generation call returns qualitative criteria through a strict JSON
+schema. Numeric criterion weights are derived deterministically by application
+code, and that call is explicitly prohibited from evaluating or ranking options.
+
+For the recommendation, criterion weights are withheld from the model. The model
+returns only validated 1–5 ratings and qualitative analysis for every option and
+criterion. Application code then calculates weighted scores, ranks the options,
+and selects the recommendation. The final screen separates user-supplied facts,
+AI inferences, deterministic calculations, and the recommendation.
 
 ## Development
 

@@ -13,16 +13,39 @@ const GENERATED_CRITERIA = [
   { id: "criterion-6", name: "Cost", description: "Assess implementation and ongoing platform cost sensitivity.", importance: "medium", rationale: "Budget sensitivity must be represented.", weight: 12 },
 ];
 
+const GENERATED_RECOMMENDATION = {
+  status: "recommended",
+  recommendedOption: "PostgreSQL",
+  summary: "PostgreSQL is the strongest fit for the supplied enterprise context.",
+  scores: [
+    { option: "PostgreSQL", weightedScore: 86.2, rank: 1, criterionScores: GENERATED_CRITERIA.map((criterion) => ({ criterionId: criterion.id, criterionName: criterion.name, weight: criterion.weight, rating: 4, weightedContribution: criterion.weight * .8, reason: "Strong fit based on the supplied context." })) },
+    { option: "MongoDB", weightedScore: 72.4, rank: 2, criterionScores: GENERATED_CRITERIA.map((criterion) => ({ criterionId: criterion.id, criterionName: criterion.name, weight: criterion.weight, rating: 3, weightedContribution: criterion.weight * .6, reason: "Some uncertainty remains in the supplied context." })) },
+  ],
+  confidence: "medium",
+  confidenceRationale: "Some operational and cost information is missing.",
+  topReasons: ["Strong alignment with the supplied enterprise architecture.", "Good fit with the stated compliance needs."],
+  keyTradeoffs: ["PostgreSQL favors architecture fit while MongoDB may offer flexibility.", "Operational familiarity may differ between the options."],
+  risks: [{ statement: "Team operating experience has not been confirmed.", severity: "medium" }],
+  missingInformation: ["Measured workload characteristics"],
+  changeFactors: ["A validated workload benchmark favoring MongoDB could change the result."],
+  facts: ["Options supplied: PostgreSQL, MongoDB.", "Compliance requirements supplied: SOC 2."],
+  inferences: ["PostgreSQL appears to have lower integration uncertainty.", "MongoDB may require additional operational validation."],
+  generatedAt: "2026-08-15T13:00:00.000Z",
+  model: "test-model",
+  provider: "ollama",
+  scoringMethod: "deterministic_weighted_rating_v1",
+};
+
 beforeEach(() => {
-  globalThis.fetch = vi.fn().mockResolvedValue({
+  globalThis.fetch = vi.fn().mockImplementation((url) => Promise.resolve({
     ok: true,
-    json: async () => ({
+    json: async () => url === "/api/recommendation/generate" ? GENERATED_RECOMMENDATION : ({
       criteria: GENERATED_CRITERIA,
       generatedAt: "2026-08-15T12:00:00.000Z",
       model: "test-model",
       weightingMethod: "deterministic_importance_normalization_v1",
     }),
-  });
+  }));
 });
 
 function completeDefineDecision() {
@@ -50,7 +73,7 @@ describe("decision setup flow", () => {
     expect(screen.getByRole("heading", { name: "What are you trying to decide?" })).toBeInTheDocument();
   });
 
-  it("moves through all four steps, preserves selections, and saves the draft", async () => {
+  it("moves through all five steps, preserves context, and saves the recommendation", async () => {
     render(<App />);
     completeDefineDecision();
     fireEvent.click(screen.getByRole("button", { name: /continue/i }));
@@ -89,6 +112,20 @@ describe("decision setup flow", () => {
     expect(stored.evaluationCriteria.items.reduce((total, criterion) => total + criterion.weight, 0)).toBe(100);
     expect(fetch).toHaveBeenCalledWith("/api/criteria/generate", expect.objectContaining({ method: "POST" }));
 
+    fireEvent.click(screen.getByRole("button", { name: /analyze options/i }));
+    expect(screen.getByRole("heading", { name: "Recommendation" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByRole("heading", { name: "PostgreSQL" })).toHaveLength(2));
+    expect(screen.getByText("86.2")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Facts from your inputs" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI inferences" })).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith("/api/recommendation/generate", expect.objectContaining({ method: "POST" }));
+    await waitFor(() => {
+      const savedRecommendation = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY));
+      expect(savedRecommendation.recommendation.recommendedOption).toBe("PostgreSQL");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
+    expect(screen.getByRole("heading", { name: "Here’s what matters for this decision" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
     expect(screen.getByRole("heading", { name: "What does your technology environment look like?" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
