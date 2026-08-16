@@ -8,7 +8,7 @@ export function PageShell({ currentStep, saveState, children }) {
         <Brand />
         <div className={`save-state save-state--${saveState}`} role="status">
           <span aria-hidden="true">{saveState === "saving" ? "•••" : "✓"}</span>
-          {saveState === "saving" ? "Saving draft" : saveState === "saved" ? "Draft saved" : "Draft saves automatically"}
+          {saveState === "saving" ? "Updating progress" : saveState === "saved" ? "Session progress saved" : "Starts fresh on reload"}
         </div>
       </header>
       <main>

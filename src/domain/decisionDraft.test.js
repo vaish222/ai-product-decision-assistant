@@ -70,8 +70,9 @@ describe("draft persistence", () => {
       projectContext: { projectType: "Platform migration" },
     }));
     const migrated = loadDraft();
-    expect(migrated.schemaVersion).toBe(4);
+    expect(migrated.schemaVersion).toBe(5);
     expect(migrated.defineDecision.title).toBe("Existing decision");
+    expect(migrated.projectContext.projectType).toEqual(["Platform migration"]);
     expect(migrated.enterpriseContext.currentTechStack.databases).toEqual([]);
     expect(migrated.evaluationCriteria.items).toEqual([]);
     expect(migrated.recommendation.scores).toEqual([]);

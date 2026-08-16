@@ -1,5 +1,6 @@
-export const DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v4";
+export const DRAFT_STORAGE_KEY = "ai-product-decision-assistant:draft:v5";
 export const LEGACY_DRAFT_STORAGE_KEYS = [
+  "ai-product-decision-assistant:draft:v4",
   "ai-product-decision-assistant:draft:v3",
   "ai-product-decision-assistant:draft:v2",
   "ai-product-decision-assistant:draft:v1",
@@ -43,7 +44,7 @@ export const CONSTRAINT_CLASSIFICATIONS = ["Must Have", "Preferred", "Nice to Ha
 
 export function createEmptyDraft() {
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     currentStep: 1,
     updatedAt: null,
     defineDecision: {
@@ -55,7 +56,7 @@ export function createEmptyDraft() {
       desiredOutcome: "",
     },
     projectContext: {
-      projectType: "",
+      projectType: [],
       expectedScale: "",
       timeline: "",
       teamSize: "",
@@ -98,7 +99,8 @@ export function createEmptyDraft() {
 }
 
 function required(value, label) {
-  return value.trim() ? "" : `${label} is required.`;
+  if (Array.isArray(value)) return value.length ? "" : `${label} is required.`;
+  return String(value || "").trim() ? "" : `${label} is required.`;
 }
 
 function maxLength(value, label, maximum) {
@@ -186,15 +188,20 @@ function removeEmptyErrors(errors) {
 
 function migrateDraft(stored) {
   const emptyDraft = createEmptyDraft();
-  if (!stored || ![1, 2, 3, 4].includes(stored.schemaVersion)) return emptyDraft;
+  if (!stored || ![1, 2, 3, 4, 5].includes(stored.schemaVersion)) return emptyDraft;
   const currentStack = stored.enterpriseContext?.currentTechStack || {};
+  const storedProjectType = stored.projectContext?.projectType;
   return {
     ...emptyDraft,
     ...stored,
-    schemaVersion: 4,
+    schemaVersion: 5,
     currentStep: [2, 3, 4, 5].includes(stored.currentStep) ? stored.currentStep : 1,
     defineDecision: { ...emptyDraft.defineDecision, ...stored.defineDecision },
-    projectContext: { ...emptyDraft.projectContext, ...stored.projectContext },
+    projectContext: {
+      ...emptyDraft.projectContext,
+      ...stored.projectContext,
+      projectType: Array.isArray(storedProjectType) ? storedProjectType : storedProjectType ? [storedProjectType] : [],
+    },
     enterpriseContext: {
       ...emptyDraft.enterpriseContext,
       ...stored.enterpriseContext,
@@ -221,4 +228,8 @@ export function saveDraft(draft, storage = window.localStorage) {
   const savedDraft = { ...draft, updatedAt: new Date().toISOString() };
   storage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(savedDraft));
   return savedDraft;
+}
+
+export function clearDraft(storage = window.localStorage) {
+  for (const key of [DRAFT_STORAGE_KEY, ...LEGACY_DRAFT_STORAGE_KEYS]) storage.removeItem(key);
 }

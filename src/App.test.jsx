@@ -101,6 +101,7 @@ describe("decision setup flow", () => {
     const stored = JSON.parse(window.localStorage.getItem(DRAFT_STORAGE_KEY));
     expect(stored.defineDecision.optionA).toBe("PostgreSQL");
     expect(stored.projectContext.teamSize).toBe("12");
+    expect(stored.projectContext.projectType).toEqual(["New application"]);
     expect(stored.projectContext.complianceRequirements).toEqual(["SOC 2"]);
     expect(stored.enterpriseContext.currentTechStack.databases).toEqual(["PostgreSQL"]);
     expect(stored.enterpriseContext.plannedTechnologies).toEqual(["Kubernetes"]);
@@ -124,16 +125,20 @@ describe("decision setup flow", () => {
       expect(savedRecommendation.recommendation.recommendedOption).toBe("PostgreSQL");
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
-    expect(screen.getByRole("heading", { name: "Here’s what matters for this decision" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
-    expect(screen.getByRole("heading", { name: "What does your technology environment look like?" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
-    expect(screen.getByRole("heading", { name: "Tell us about your project" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
-    expect(screen.getByLabelText("Decision title")).toHaveValue("Choose our application database");
+    fireEvent.click(screen.getByRole("button", { name: /start new decision/i }));
+    expect(screen.getByRole("heading", { name: "What are you trying to decide?" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Decision title")).toHaveValue("");
+    expect(screen.getByLabelText("Option A")).toHaveValue("");
+  });
 
-    await waitFor(() => expect(screen.getByText("Draft saved")).toBeInTheDocument());
+  it("allows selecting multiple project types", () => {
+    render(<App />);
+    completeDefineDecision();
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    fireEvent.click(screen.getByLabelText("New application"));
+    fireEvent.click(screen.getByLabelText("AI/ML application"));
+    expect(screen.getByLabelText("New application")).toBeChecked();
+    expect(screen.getByLabelText("AI/ML application")).toBeChecked();
   });
 
   it("treats None / Unknown as mutually exclusive", () => {
@@ -146,7 +151,7 @@ describe("decision setup flow", () => {
     expect(document.getElementById("compliance-none-unknown")).toBeChecked();
   });
 
-  it("restores a saved draft at its last step", () => {
+  it("starts blank and clears a previous browser draft on reload", () => {
     window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
       schemaVersion: 3,
       currentStep: 4,
@@ -158,15 +163,17 @@ describe("decision setup flow", () => {
     }));
 
     render(<App />);
-    expect(screen.getByRole("heading", { name: "Here’s what matters for this decision" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Security & Compliance" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^back$/i }));
-    expect(screen.getByRole("heading", { name: "What does your technology environment look like?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What are you trying to decide?" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Decision title")).toHaveValue("");
+    expect(window.localStorage.getItem(DRAFT_STORAGE_KEY)).toBeNull();
   });
 
   it("validates, reclassifies, and removes enterprise constraints", () => {
-    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ schemaVersion: 3, currentStep: 3 }));
     render(<App />);
+    completeDefineDecision();
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    completeProjectContext();
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
 
     fireEvent.click(screen.getByRole("button", { name: "Add" }));
     expect(screen.getByText("Describe the enterprise constraint before adding it.")).toBeInTheDocument();
@@ -184,8 +191,11 @@ describe("decision setup flow", () => {
       ok: false,
       json: async () => ({ error: "OPENAI_API_KEY is not configured on the server." }),
     });
-    window.localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ schemaVersion: 3, currentStep: 3 }));
     render(<App />);
+    completeDefineDecision();
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    completeProjectContext();
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
     fireEvent.click(screen.getByRole("button", { name: /generate evaluation criteria/i }));
     await waitFor(() => expect(screen.getByText("OPENAI_API_KEY is not configured on the server.")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();

@@ -1,12 +1,24 @@
-export function ChoiceGroup({ id, legend, hint, options, value, onChange, error, compact = false }) {
+export function ChoiceGroup({ id, legend, hint, options, value, onChange, error, compact = false, multiple = false }) {
+  function isSelected(option) {
+    return multiple ? value.includes(option) : value === option;
+  }
+
+  function select(option) {
+    if (!multiple) {
+      onChange(option);
+      return;
+    }
+    onChange(value.includes(option) ? value.filter((item) => item !== option) : [...value, option]);
+  }
+
   return (
     <fieldset className={`choice-group ${compact ? "choice-group--compact" : ""}`} aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}>
       <legend>{legend}</legend>
       {hint && <p className="field__hint" id={`${id}-hint`}>{hint}</p>}
       <div className="choice-group__grid">
         {options.map((option) => (
-          <label className={`choice-card ${value === option ? "choice-card--selected" : ""}`} key={option}>
-            <input type="radio" name={id} value={option} checked={value === option} onChange={() => onChange(option)} />
+          <label className={`choice-card ${multiple ? "choice-card--multiple" : ""} ${isSelected(option) ? "choice-card--selected" : ""}`} key={option}>
+            <input type={multiple ? "checkbox" : "radio"} name={id} value={option} checked={isSelected(option)} onChange={() => select(option)} />
             <span className="choice-card__control" aria-hidden="true" />
             <span>{option}</span>
           </label>

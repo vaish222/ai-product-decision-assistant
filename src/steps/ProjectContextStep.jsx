@@ -39,7 +39,7 @@ export function ProjectContextStep({ values, onChange, onBack, onContinue }) {
           </div>
           <span className="section-number">01</span>
         </div>
-        <ChoiceGroup id="project-type" legend="Project type" options={PROJECT_TYPES} value={values.projectType} onChange={(value) => update("projectType", value)} error={errors.projectType} />
+        <ChoiceGroup id="project-type" legend="Project type" hint="Select one or more project types." options={PROJECT_TYPES} value={values.projectType} onChange={(value) => update("projectType", value)} error={errors.projectType} multiple />
         <ChoiceGroup id="expected-scale" legend="Expected scale" options={SCALE_OPTIONS} value={values.expectedScale} onChange={(value) => update("expectedScale", value)} error={errors.expectedScale} compact />
       </section>
 

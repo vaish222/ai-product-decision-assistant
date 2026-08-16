@@ -10,7 +10,7 @@ import { EvaluationCriteriaStep } from "./steps/EvaluationCriteriaStep";
 import { RecommendationStep } from "./steps/RecommendationStep";
 
 export function App() {
-  const { draft, updateSection, replaceSection, goToStep, saveImmediately, saveState } = useDecisionDraft();
+  const { draft, updateSection, replaceSection, goToStep, saveImmediately, resetDraft, saveState } = useDecisionDraft();
   const [criteriaState, setCriteriaState] = useState(() => ({
     status: draft.evaluationCriteria.items.length ? "success" : "idle",
     error: "",
@@ -74,6 +74,12 @@ export function App() {
     }
   }
 
+  function startNewDecision() {
+    resetDraft();
+    setCriteriaState({ status: "idle", error: "" });
+    setRecommendationState({ status: "idle", error: "" });
+  }
+
   return (
     <PageShell currentStep={draft.currentStep} saveState={saveState}>
       {draft.currentStep === 1 ? (
@@ -111,6 +117,7 @@ export function App() {
           values={draft.recommendation}
           onBack={() => goToStep(4)}
           onRetry={analyzeOptions}
+          onStartNew={startNewDecision}
         />
       )}
     </PageShell>

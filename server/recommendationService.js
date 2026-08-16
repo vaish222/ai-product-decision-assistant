@@ -225,7 +225,8 @@ export function buildContextFacts(context, options) {
     `Decision: ${decision.title || "Untitled decision"}.`,
     `Options supplied: ${options.join(", ")}.`,
   ];
-  const projectParts = [projectContext.projectType, projectContext.expectedScale, projectContext.timeline]
+  const projectTypes = Array.isArray(projectContext.projectType) ? projectContext.projectType.join(", ") : projectContext.projectType;
+  const projectParts = [projectTypes, projectContext.expectedScale, projectContext.timeline]
     .filter(Boolean);
   if (projectParts.length) facts.push(`Project context: ${projectParts.join("; ")}.`);
   if (projectContext.teamSize) facts.push(`Team size supplied: ${projectContext.teamSize}.`);

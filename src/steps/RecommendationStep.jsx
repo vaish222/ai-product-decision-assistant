@@ -37,7 +37,7 @@ function ScoreCard({ score, isRecommended }) {
   );
 }
 
-export function RecommendationStep({ recommendationState, values, onBack, onRetry }) {
+export function RecommendationStep({ recommendationState, values, onBack, onRetry, onStartNew }) {
   const hasRecommendation = values.scores?.length > 0;
   const confidenceLabel = values.confidence ? `${values.confidence[0].toUpperCase()}${values.confidence.slice(1)}` : "Unknown";
 
@@ -124,7 +124,10 @@ export function RecommendationStep({ recommendationState, values, onBack, onRetr
 
       <div className="form-actions">
         <button className="button button--secondary" type="button" onClick={onBack}><span aria-hidden="true">←</span> Back</button>
-        {hasRecommendation && <button className="button button--secondary" type="button" onClick={onRetry}>Regenerate analysis</button>}
+        {hasRecommendation && <div className="form-actions__group">
+          <button className="button button--secondary" type="button" onClick={onRetry}>Regenerate analysis</button>
+          <button className="button button--primary" type="button" onClick={onStartNew}>Start new decision <span aria-hidden="true">↻</span></button>
+        </div>}
       </div>
     </div>
   );

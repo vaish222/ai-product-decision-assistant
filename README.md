@@ -29,6 +29,11 @@ The web application runs at `http://127.0.0.1:3000`; the local API runs at
 the locally installed `gemma4:latest` model through Ollama, with no API key or
 per-request fee. Start the Ollama application before generating criteria.
 
+Decision progress is retained while navigating the open application, but every
+full browser reload starts a blank decision. The final Recommendation step also
+provides a **Start new decision** action that clears the current workflow. Project
+type is a multi-select checkbox field and accepts one or more classifications.
+
 To use OpenAI instead, set `LLM_PROVIDER=openai`, `OPENAI_API_KEY`, and optionally
 `OPENAI_MODEL` in `.env.local`. Provider settings are read only by the server. Do
 not prefix secrets with `VITE_`, which would expose them to the browser bundle.

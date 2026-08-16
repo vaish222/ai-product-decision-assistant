@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { loadDraft, saveDraft } from "../domain/decisionDraft";
+import { clearDraft, createEmptyDraft, saveDraft } from "../domain/decisionDraft";
 
 export function useDecisionDraft() {
-  const [draft, setDraft] = useState(loadDraft);
-  const [saveState, setSaveState] = useState(draft.updatedAt ? "saved" : "idle");
+  const [draft, setDraft] = useState(() => {
+    clearDraft();
+    return createEmptyDraft();
+  });
+  const [saveState, setSaveState] = useState("idle");
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -50,5 +53,11 @@ export function useDecisionDraft() {
     setSaveState("saved");
   }
 
-  return { draft, updateSection, replaceSection, goToStep, saveImmediately, saveState };
+  function resetDraft() {
+    clearDraft();
+    setDraft(createEmptyDraft());
+    setSaveState("idle");
+  }
+
+  return { draft, updateSection, replaceSection, goToStep, saveImmediately, resetDraft, saveState };
 }
